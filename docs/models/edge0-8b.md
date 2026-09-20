@@ -48,6 +48,7 @@ Optional arguments:
 
 - `--no-prerouter`: disable the prerouter (`prerouter=None`).
 - `--no-lora`: disable LoRA (`lora=""`).
+- `--prefill-ondemand`: prefill through per-expert on-demand loads instead of the E3b whole-layer path. A 27-token prompt then reads ≈0.4–0.8 GiB of routed experts instead of the whole ≈4.1 GiB checkpoint (measured cold-cache prefill: 0.6–1.1 s vs 5.3 s on an M4 Pro). This is the setting for a machine whose page cache cannot hold the checkpoint — 16 GB class, see issue #110.
 - `--flask`: switch to the Flask transport (requires flask to be installed; supports SSE streaming).
 
 For single-turn chat in the terminal, use `chat` instead:
@@ -159,4 +160,4 @@ engine = AutoEngine.from_pretrained(
 )
 ```
 
-The corresponding CLI overrides are `--no-prerouter` / `--no-lora` (see `_engine_kwargs` in `src/edge0/cli.py`). To override engine parameters, call `Ling8BConfig.from_pretrained(model_dir, **overrides)` directly.
+The corresponding CLI override is `--prefill-ondemand` (config switch `prefill_ondemand`, applied to whatever preset the tier ships), alongside `--no-prerouter` / `--no-lora` (see `_engine_kwargs` in `src/edge0/cli.py`). To override engine parameters directly, call `Ling8BConfig.from_pretrained(model_dir, **overrides)`.
