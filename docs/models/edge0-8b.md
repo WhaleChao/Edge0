@@ -34,7 +34,7 @@ This tier uses the `LayerOptions.prod_k8()` preset (aligned with the reference d
 
 - Staged decode is off (`staged=False`, `staged_sync=False`, `staged_n=8`) — deployment verification showed that staged decode degrades output on this tier, so the prerouter directly drives expert prefetch for the next token (one `stage_all` at the step boundary and one at the prefill tail).
 - Expert cache `cache_slots=64`, hot-expert pinning off (`hot_per_layer=0`).
-- Full-layer E3b prefill (`full_layer_prefill=True`, `prefill_chunk=2048`).
+- Full-layer E3b prefill (`full_layer_prefill=True`, `prefill_chunk=2048`). Setting `full_layer_prefill=False` switches this tier to on-demand prefill: for a 27-token prompt that reads ≈0.42 GiB of routed experts instead of the whole ≈4.1 GiB checkpoint (measured on an M4 Pro), which is the difference between ~0.6 s and ~5 s of cold-cache prefill — the lever for machines whose page cache cannot hold the checkpoint (issue #110).
 
 ## Usage
 

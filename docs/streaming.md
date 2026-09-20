@@ -50,7 +50,7 @@ Deduplicate the routing indices → `_get_bundles(unique)` builds per expert (re
 
 - `load_full_layer()`: loads the layer's 9 tensors directly (the checkpoint already stores each layer as a single stacked tensor; the mmap dtype conversion costs ≈9ms per layer, and the CPU load is hidden under the previous layer's GPU execution);
 - `_gather_sort` folds the batch into the token dimension → sorted gather → `_scatter_unsort` un-sorts and restores the batch dimension;
-- `full_layer_prefill` turns whole-layer prefill on per tier, and `prefill_full_layers` limits it to the leading N layers (0 = every layer, the edge0-8b setting); layers outside that range go through hot/exact;
+- `full_layer_prefill` turns whole-layer prefill on per tier, and `prefill_full_layers` limits it to the leading N layers (0 = every layer, the edge0-8b setting); layers outside that range go through hot/exact. With `full_layer_prefill=False` the whole-layer path is off entirely — no layer is loaded whole, whatever `prefill_full_layers` says — and prefill runs the `prefill_hot` window if one is set, else the plain per-expert on-demand path;
 - After use, `clear_full_layer()` frees the GPU copy, and the page cache carries the hot data.
 
 ## Sorting and Compilation
