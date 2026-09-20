@@ -89,6 +89,45 @@ def test_edge0_35b_real_checkpoint():
     assert len(output) <= MAX_NEW_TOKENS
 
 
+def test_edge0_8b_prefill_ondemand_switch_skips_whole_layers(monkeypatch):
+    """The `--prefill-ondemand` path (config switch -> engine) really takes
+    the on-demand prefill, and leaves the next token identical."""
+    from edge0.backends import core
+    from edge0.streaming.layer import StreamingSwitchGLU
+
+    model_dir = _checkpoint("EDGE0_8B_MODEL", "edge0-8b")
+    messages = [{"role": "user", "content": "你好，请用一句话介绍海滨城市。"}]
+
+    engine = AutoEngine.from_pretrained(model_dir, name="edge0-8b")
+    try:
+        ids = _chat_ids(engine, messages)
+        assert len(ids) > 1, "need a multi-token prefill"
+        engine.reset()
+        engine.prefill(ids)
+        baseline = int(core.argmax(engine.next_logits(), axis=-1).item())
+    finally:
+        engine.close()
+
+    loads: list[int] = []
+    original = StreamingSwitchGLU.load_full_layer
+
+    def counted(self, *args, **kwargs):
+        loads.append(1)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(StreamingSwitchGLU, "load_full_layer", counted)
+    engine = AutoEngine.from_pretrained(model_dir, name="edge0-8b",
+                                        prefill_ondemand=True)
+    try:
+        engine.reset()
+        engine.prefill(ids)
+        assert loads == [], (
+            f"--prefill-ondemand still loaded {len(loads)} whole layers")
+        assert int(core.argmax(engine.next_logits(), axis=-1).item()) == baseline
+    finally:
+        engine.close()
+
+
 def test_edge0_8b_ondemand_prefill_is_honored(monkeypatch):
     """``full_layer_prefill=False`` must really skip the whole-layer prefill.
 
